@@ -1,3 +1,9 @@
+bluez (5.85-3deepin9) unstable; urgency=medium
+
+  * Fix heap overflow in PBAP Database Identifier check and use-after-free in gatt-client teardown
+
+ -- deepin-ci-robot <packages@deepin.org>  Thu, 16 Jul 2026 16:49:33 +0800
+
 bluez (5.85-3deepin8) unstable; urgency=medium
 
   * Fix integer overflow in sdp_extract_seqtype.
