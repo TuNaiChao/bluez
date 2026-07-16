@@ -1,0 +1,80 @@
+From ee4a4775bc4f8348e2a860dc44bcdd7570279908 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Fr=C3=A9d=C3=A9ric=20Danis?= <frederic.danis@collabora.com>
+Date: Tue, 12 May 2026 10:37:50 +0200
+Subject: [PATCH] pbap: Fix not checking Database Identifier length
+
+Database Identifier is supposed to be 16 bytes values.
+
+A paired Bluetooth device acting as a PBAP server can overflow the
+heap in obexd by up to 239 bytes into adjacent allocations by returning
+a DATABASEID_TAG application parameter with an oversized length.
+With both length and content fully attacker-controlled, this enables
+standard glibc heap exploitation primitives (tcache/fastbin poisoning)
+leading to remote code execution in the obexd process.
+
+diff --git a/obexd/client/pbap.c b/obexd/client/pbap.c
+index 0f575e61e..ce5e6cd5d 100644
+--- a/obexd/client/pbap.c
++++ b/obexd/client/pbap.c
+@@ -330,7 +330,8 @@ static void read_databaseid(struct pbap_data *pbap, GObexApparam *apparam)
+ 		data = value;
+ 	}
+ 
+-	if (memcmp(data, pbap->databaseid, len)) {
++	if (len == sizeof(pbap->databaseid) &&
++			memcmp(data, pbap->databaseid, len)) {
+ 		memcpy(pbap->databaseid, data, len);
+ 		g_dbus_emit_property_changed(conn,
+ 					obc_session_get_path(pbap->session),
+
+From d01616f0c276a441dad8afe4e8f7bb261b26ba0a Mon Sep 17 00:00:00 2001
+From: Jinwang Li <jinwang.li@oss.qualcomm.com>
+Date: Wed, 29 Apr 2026 19:48:06 +0800
+Subject: [PATCH] gatt-client: Fix use-after-free caused by reentrant client
+ teardown
+
+btd_gatt_client_service_removed() can be called reentrantly via
+bt_gatt_client_unref() after the services queue has already been freed,
+resulting in a use-after-free.
+
+Reset client->ready to false before destroying the services queue to
+prevent reentrant calls from dereferencing freed memory.
+
+This was found with the following backtrace:
+
+    #0  match_service_handle ()
+    #1  queue_remove_if ()
+    #2  queue_remove_all ()
+    #3  btd_gatt_client_service_removed ()
+    #4  gatt_service_removed ()
+    #5  handle_notify ()
+    #6  queue_foreach ()
+    #7  notify_service_changed ()
+    #8  gatt_db_service_destroy ()
+    #9  queue_remove_all ()
+    #10 gatt_db_clear_range ()
+    #11 service_changed_failure ()
+    #12 discovery_op_unref ()
+    #13 bt_gatt_request_unref ()
+    #14 bt_gatt_client_cancel_all ()
+    #15 bt_gatt_client_free ()
+    #16 bt_gatt_client_unref ()
+    #17 bt_gatt_client_free ()
+    #18 bt_gatt_client_unref ()
+    #19 btd_gatt_client_destroy ()
+    #20 device_free ()
+
+diff --git a/src/gatt-client.c b/src/gatt-client.c
+index 374e67c34..3baf95c4f 100644
+--- a/src/gatt-client.c
++++ b/src/gatt-client.c
+@@ -2261,6 +2261,8 @@ void btd_gatt_client_destroy(struct btd_gatt_client *client)
+ 	if (!client)
+ 		return;
+ 
++	client->ready = false;
++
+ 	queue_destroy(client->services, unregister_service);
+ 	queue_destroy(client->all_notify_clients, NULL);
+ 	queue_destroy(client->ios, NULL);
+
