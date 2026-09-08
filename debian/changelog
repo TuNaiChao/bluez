@@ -1,3 +1,12 @@
+bluez (5.85-3deepin10) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-80186 (high) - eir: Fix stack buffer overflow
+    when parsing the remote name   Upstream:
+    https://github.com/bluez/bluez/commit/381b5d0d208972586282116d333865
+    ba93b8dec2
+
+ -- deepin-ci-robot <packages@deepin.org>  Tue, 08 Sep 2026 14:00:23 +0800
+
 bluez (5.85-3deepin9) unstable; urgency=medium
 
   * Fix heap overflow in PBAP Database Identifier check and use-after-free in gatt-client teardown
