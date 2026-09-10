@@ -1,3 +1,12 @@
+bluez (5.85-3deepin11) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-80185 (medium) - sdp-xml: Fix crash caused by
+    type confusion when parsing crafted SDP XML   Upstream:
+    https://github.com/bluez/bluez/commit/985e643d78b09afc81d606bc0a0858
+    1fc05b1b15.patch
+
+ -- deepin-ci-robot <packages@deepin.org>  Thu, 10 Sep 2026 22:41:14 +0800
+
 bluez (5.85-3deepin10) unstable; urgency=medium
 
   * fix(cve): CVE-2026-80186 (high) - eir: Fix stack buffer overflow
